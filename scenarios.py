@@ -31,7 +31,7 @@ class ScenarioConfig:
     name: str
     scenario: dict
     datapackage: str
-    capacities: dict
+    capacities: dict | None = dataclasses.field(default_factory=dict)
 
 
 def get_scenarios_in_folder(folder: Path = SCENARIOS_DIR) -> Iterable[Path]:
