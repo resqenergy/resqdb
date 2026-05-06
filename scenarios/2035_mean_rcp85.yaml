@@ -1,0 +1,7 @@
+
+scenario:
+  period: P2
+  climate: RCP8.5
+  weather: mean
+
+datapackage: adlershof_2035_mean_rcp85
