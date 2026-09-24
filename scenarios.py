@@ -48,6 +48,7 @@ def load_scenario_settings_from_file(filepath: str | Path) -> ScenarioConfig:
     If only filename is given as a string, the file is read from scenario directory.
     """
     if isinstance(filepath, str):
+        filepath = f"{filepath}.yaml" if not filepath.endswith(".yaml") else filepath
         filepath = SCENARIOS_DIR / filepath
     if not filepath.exists():
         error_msg = f"Scenario file '{filepath}' not found."
