@@ -127,6 +127,7 @@ class Scenario(Base):
     __table_args__ = (
         Index(
             "scenario_without_sensitivity",
+            name,
             period_id,
             weather_id,
             climate_id,
@@ -135,6 +136,7 @@ class Scenario(Base):
         ),
         Index(
             "scenario_with_sensitivity",
+            name,
             period_id,
             weather_id,
             climate_id,
@@ -312,7 +314,7 @@ def update_default_labels() -> None:
             instance = Label(
                 component=component,
                 label=label_data["label"],
-                is_bus=label_data["bus"],
+                is_bus=label_data.get("bus", False),
             )
             session.add(instance)
 

@@ -10,6 +10,9 @@ from sqlalchemy.orm import Session
 
 from settings import ENGINE, VIEWS_DIR
 
+FUNCTIONS_DIR = VIEWS_DIR / "functions"
+FUNCTION_SIGNATURES = ("flow_label(text, text)", "node_label(text)")
+
 
 def get_views() -> Iterable[Path]:
     """
@@ -63,15 +66,37 @@ def create_view(view_name: str, query: str, *, recreate: bool = False) -> None:
         logger.info(f"Created materialized view '{view_name}'.")
 
 
+def create_functions() -> None:
+    """Create or replace SQL functions from files in the functions directory."""
+    with Session(ENGINE) as session:
+        for function_path in sorted(FUNCTIONS_DIR.glob("*.sql")):
+            session.execute(text(function_path.read_text(encoding="utf-8")))
+            logger.info(f"Created functions from '{function_path.name}'.")
+        session.commit()
+
+
+def delete_functions() -> None:
+    """Delete SQL functions used by views."""
+    with Session(ENGINE) as session:
+        session.execute(
+            text(f"DROP FUNCTION IF EXISTS {', '.join(FUNCTION_SIGNATURES)};"),
+        )
+        session.commit()
+    logger.info("Deleted SQL functions.")
+
+
 def create_all_views(*, recreate: bool = False) -> None:
     """
     Create all materialized views from SQL files in the views directory.
+
+    SQL functions are created first, as views depend on them.
 
     Args:
         recreate (bool, optional): When set to True, drops and recreates all views even
             if it already exists. Defaults to False.
 
     """
+    create_functions()
     for view_path in get_views():
         query = read_query(view_path)
         try:
@@ -93,6 +118,7 @@ def delete_all_views() -> None:
     for view_path in get_views():
         view_name = view_path.stem
         delete_view(view_name)
+    delete_functions()
 
 
 if __name__ == "__main__":

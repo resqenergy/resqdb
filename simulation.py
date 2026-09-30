@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from loguru import logger
 from oemof.solph import EnergySystem, Model, processing
 from oemof.tabular import datapackage  # noqa: F401
 from oemof.tabular.constraint_facades import CONSTRAINT_TYPE_MAP
@@ -9,12 +10,12 @@ from oemof.tabular.facades import TYPEMAP
 
 import hooks
 import settings
-from facades.heatpump import Heatpump, FLHHeatpump
-
+from facades.heatpump import AquiferHeatpump, FLHHeatpump, Heatpump
 
 RESQ_TYPEMAP = TYPEMAP.copy()
 RESQ_TYPEMAP["heatpump"] = Heatpump
 RESQ_TYPEMAP["flh_heatpump"] = FLHHeatpump
+RESQ_TYPEMAP["aquifer_heatpump"] = AquiferHeatpump
 
 
 def simulate_datapackage(
@@ -46,15 +47,17 @@ def simulate_datapackage(
 
     # Adapt ES from parameters
     parameters = parameters or {}
-    parameters = hooks.set_up_capacities(parameters)
     es = hooks.adapt_energysystem(es, parameters)
 
+    logger.info("Building model...")
     m = Model(es)
     m.add_constraints_from_datapackage(
         datapackage_json,
         constraint_type_map=CONSTRAINT_TYPE_MAP,
     )
+    logger.info("Solving model...")
     m.solve("cbc")
+    logger.info("Model solved.")
 
     input_data = processing.parameter_as_dict(
         es,
