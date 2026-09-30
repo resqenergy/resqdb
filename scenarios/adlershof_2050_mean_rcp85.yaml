@@ -1,0 +1,9 @@
+
+scenario:
+  period: P3
+  climate: RCP8.5
+  weather: mean
+
+datapackage: adlershof_2050_mean_rcp85
+
+capacities:
