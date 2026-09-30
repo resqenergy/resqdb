@@ -44,6 +44,7 @@ def run_scenario(file: str | Path, *, force_creation: bool = False) -> None:
         scenario_config.datapackage,
         scenario_config.capacities,
     )
+    export.store_results_in_folder(str(file), output_data)
     export.store_scenario_results(scenario_id, input_data, output_data)
 
 
