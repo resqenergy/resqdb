@@ -5,10 +5,12 @@ SELECT
     to_node,
     CASE
         WHEN from_node LIKE ANY(Array['%storage%', '%battery%']) THEN CONCAT(node_label(from_node), ' (Entladen)')
+        WHEN from_node = 'aquifer' THEN CONCAT(node_label(from_node), ' (Entnahme)')
         ELSE node_label(from_node)
     END AS from_label,
     CASE
         WHEN to_node LIKE ANY(Array['%storage%', '%battery%']) THEN CONCAT(node_label(to_node), ' (Laden)')
+        WHEN to_node = 'aquifer' THEN CONCAT(node_label(to_node), ' (Einspeisung)')
         ELSE node_label(to_node)
     END AS to_label,
     category.category,
