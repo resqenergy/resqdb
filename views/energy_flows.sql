@@ -18,4 +18,4 @@ SELECT
 FROM sequence
 JOIN scenario ON sequence.scenario_id = scenario.id
 LEFT JOIN category USING(from_node, to_node)
-WHERE sequence.attribute = 'flow'
+WHERE sequence.attribute = 'flow' AND total_energy > 0
