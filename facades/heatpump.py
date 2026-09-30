@@ -115,6 +115,11 @@ class Heatpump(Converter, Facade):
     def __post_init__(self) -> None:
         """Turn efficiency into a series if it is a scalar or a list."""
         self.efficiency = pd.Series(self.efficiency)
+        minimum_cop = self.efficiency.min()
+        if minimum_cop < 1:
+            raise ValueError(
+                f"COP of '{self.label}' must be greater than 1, but the minimum is {minimum_cop}.",
+            )
 
     def build_solph_components(self) -> None:
         """Build solph components."""
@@ -250,6 +255,11 @@ class FLHHeatpump(Converter, Facade):
     def __post_init__(self) -> None:
         """Turn efficiency into a series if it is a scalar or a list."""
         self.efficiency = pd.Series(self.efficiency)
+        minimum_cop = self.efficiency.min()
+        if minimum_cop < 1:
+            raise ValueError(
+                f"COP of '{self.label}' must be greater than 1, but the minimum is {minimum_cop}.",
+            )
 
     def build_solph_components(self) -> None:
         """Build solph components."""
