@@ -314,7 +314,7 @@ def update_default_labels() -> None:
             instance = Label(
                 component=component,
                 label=label_data["label"],
-                is_bus=label_data["bus"],
+                is_bus=label_data.get("bus", False),
             )
             session.add(instance)
 
