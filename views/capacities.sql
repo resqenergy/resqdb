@@ -1,27 +1,45 @@
 WITH flows AS (
     SELECT
         scenario_id,
-        scenario.name AS scenario_name,
         flow_label(from_node, to_node) AS label,
+        category.carrier,
         attribute,
         value
     FROM scalar
-    JOIN scenario ON scalar.scenario_id = scenario.id
+    LEFT JOIN category USING (from_node, to_node)
     WHERE attribute IN ('capacity', 'total')
+      AND NOT EXISTS (
+        SELECT 1
+        FROM component
+        WHERE component.component IN (scalar.from_node, scalar.to_node)
+          AND component.role IN ('excess', 'shortage', 'import', 'export')
+      )
+),
+-- Result capacities ('total') replace input capacities ('capacity') of the same component.
+capacities AS (
+    SELECT
+        scenario_id,
+        label,
+        carrier,
+        MAX(value) AS capacity
+    FROM flows
+    WHERE attribute = 'total'
+       OR NOT EXISTS (
+        SELECT 1
+        FROM flows AS totals
+        WHERE totals.attribute = 'total'
+          AND totals.scenario_id = flows.scenario_id
+          AND totals.label = flows.label
+      )
+    GROUP BY
+        scenario_id,
+        label,
+        carrier
 )
 SELECT
-    scenario_id,
-    scenario_name,
+    dimensions.*,
     label,
-    COALESCE(
-        MAX(CASE WHEN attribute = 'total' THEN value END),
-        MAX(CASE WHEN attribute = 'capacity' THEN value END)
-    ) AS capacity
-FROM flows
-WHERE label NOT LIKE ALL(
-    ARRAY['Abregelung%', 'Fehlmenge%', '%Export', '%Import']
-)
-GROUP BY
-    scenario_id,
-    scenario_name,
-    label
+    carrier,
+    capacity
+FROM capacities
+JOIN scenario_dimensions() AS dimensions USING (scenario_id)

@@ -1,12 +1,13 @@
 SELECT
-    scenario_id,
-    scenario.name AS scenario_name,
+    dimensions.*,
     cluster.name,
     flow_label(from_node, to_node) AS label,
+    category.category,
+    category.carrier,
     total_energy
 FROM sequence
 JOIN cluster_component USING (from_node)
 JOIN cluster ON cluster_component.cluster_id = cluster.id
-JOIN scenario ON sequence.scenario_id = scenario.id
+LEFT JOIN category USING (from_node, to_node)
+JOIN scenario_dimensions() AS dimensions USING (scenario_id)
 WHERE sequence.attribute = 'flow'
-ORDER BY scenario_id, cluster.name

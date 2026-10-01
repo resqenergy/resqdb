@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from settings import ENGINE, VIEWS_DIR
 
 FUNCTIONS_DIR = VIEWS_DIR / "functions"
-FUNCTION_SIGNATURES = ("flow_label(text, text)", "node_label(text)")
+FUNCTION_SIGNATURES = (
+    "flow_label(text, text)",
+    "node_label(text)",
+    "scenario_dimensions()",
+)
 
 
 def get_views() -> Iterable[Path]:
@@ -35,9 +39,7 @@ def get_views() -> Iterable[Path]:
 def read_query(view: Path) -> str:
     """Read a SQL query from a file."""
     with view.open("r", encoding="utf-8") as view_file:
-        query = view_file.read()
-        query = query.replace(";", "")
-        return query
+        return view_file.read().rstrip().removesuffix(";")
 
 
 def create_view(view_name: str, query: str, *, recreate: bool = False) -> None:
@@ -101,8 +103,10 @@ def create_all_views(*, recreate: bool = False) -> None:
         query = read_query(view_path)
         try:
             create_view(view_path.stem, query, recreate=recreate)
-        except ProgrammingError:
-            logger.error(f"Failed to create materialized view '{view_path.stem}'.")
+        except ProgrammingError as error:
+            logger.error(
+                f"Failed to create materialized view '{view_path.stem}': {error.orig}",
+            )
 
 
 def delete_view(view_name: str) -> None:

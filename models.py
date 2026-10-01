@@ -28,7 +28,7 @@ import settings
 import views
 from alembic import command
 from alembic.config import Config
-from settings import CATEGORIES, CLUSTER_GEOPACKAGE, CLUSTERS, ENGINE, LABELS
+from settings import CATEGORIES, CLUSTER_GEOPACKAGE, CLUSTERS, COMPONENTS, ENGINE
 
 NAMING_CONVENTION = {
     "ix": "ix_%(column_0_label)s",
@@ -236,15 +236,17 @@ class Scalar(Base):
     value = Column(Float)
 
 
-class Label(Base):
-    """Holds mappings to label components based on from/to node."""
+class Component(Base):
+    """Holds labels and roles (bus, storage, excess, ...) of components."""
 
-    __tablename__ = "label"
+    __tablename__ = "component"
 
     id = Column(Integer, primary_key=True)
     component = Column(String, unique=True, nullable=False)
-    is_bus = Column(Boolean, nullable=False)
     label = Column(String, nullable=False)
+    role = Column(String)
+    label_in = Column(String)
+    label_out = Column(String)
 
 
 class Category(Base):
@@ -305,16 +307,18 @@ def get_or_create(
     return instance, True
 
 
-def update_default_labels() -> None:
-    """Migrate labels to database."""
+def update_default_components() -> None:
+    """Migrate components to database."""
     with Session(ENGINE) as session:
-        session.execute(delete(Label))
-        logger.info("Adding default labels to the database.")
-        for component, label_data in LABELS.items():
-            instance = Label(
+        session.execute(delete(Component))
+        logger.info("Adding default components to the database.")
+        for component, component_data in COMPONENTS.items():
+            instance = Component(
                 component=component,
-                label=label_data["label"],
-                is_bus=label_data.get("bus", False),
+                label=component_data["label"],
+                role=component_data.get("role"),
+                label_in=component_data.get("label_in"),
+                label_out=component_data.get("label_out"),
             )
             session.add(instance)
 
@@ -440,7 +444,7 @@ def setup_db() -> None:
     set_up_timescaledb()
     add_default_weather_and_climate()
     add_default_periods()
-    update_default_labels()
+    update_default_components()
     update_default_categories()
     add_clusters_from_geopackage()
     update_cluster_components()

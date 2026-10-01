@@ -57,9 +57,9 @@ CLUSTER_GEOPACKAGE = GEOPACKAGES_DIR / "clusters.gpkg"
 with CLUSTER_COMPONENT_FILE.open("r", encoding="utf-8") as json_file:
     CLUSTERS = json.load(json_file)
 
-# --- Labels and categories Mapping ---
-with (CONFIG_DIR / "labels.json").open("r", encoding="utf-8") as json_file:
-    LABELS: dict[str, dict[str, bool | str]] = json.load(json_file)
+# --- Components and categories Mapping ---
+with (CONFIG_DIR / "component.json").open("r", encoding="utf-8") as json_file:
+    COMPONENTS: dict[str, dict[str, str]] = json.load(json_file)
 
 with (CONFIG_DIR / "categories.json").open("r", encoding="utf-8") as json_file:
     categories_raw = json.load(json_file)

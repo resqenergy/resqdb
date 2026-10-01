@@ -1,4 +1,4 @@
-table_name: input_timeseries
+table_name: flow_timeseries
 main_dttm_col: null
 description: null
 default_endpoint: null

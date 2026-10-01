@@ -49,6 +49,7 @@ lint.ignore = [
   "RUF012",  # Mutable class attributes should be annotated with `typing.ClassVar`
 ]
 lint.unfixable = ["UP007", "I001"]
+lint.per-file-ignores = { "tests/*" = ["S608"] }  # view names in tests come from fixed SQL file stems
 exclude = [
   "alembic/"
 ]
