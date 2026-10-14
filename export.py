@@ -46,11 +46,11 @@ def store_results_in_folder(datapackage_name: str, results: dict) -> None:
     for nodes, data in results.items():
         if not data["scalars"].empty:
             data["scalars"].to_csv(
-                results_path / f"{nodes[0]}_{nodes[1]}_scalars.csv",
+                results_path / f"{nodes[0]}-{nodes[1]}-scalars.csv",
                 sep=";",
             )
         data["sequences"].to_csv(
-            results_path / f"{nodes[0]}_{nodes[1]}_sequences.csv",
+            results_path / f"{nodes[0]}-{nodes[1]}-sequences.csv",
             sep=";",
         )
 
