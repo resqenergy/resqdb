@@ -20,6 +20,7 @@ def no_database(monkeypatch: pytest.MonkeyPatch) -> None:
     for module in (settings, models, scenarios, views):
         monkeypatch.setattr(module, "ENGINE", None)
     monkeypatch.setattr(settings, "DATABASE_URL", None)
+    monkeypatch.setattr(settings, "DB_CONFIG_ERROR", None)
 
 
 @pytest.fixture
@@ -150,3 +151,42 @@ def test_cli_db_commands_fail_without_db(
         run_cli(monkeypatch, command)
 
     assert "database not configured" in capsys.readouterr().err
+
+
+@pytest.fixture
+def incomplete_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Simulate partially set DB credentials."""
+    monkeypatch.setattr(
+        settings,
+        "DB_CONFIG_ERROR",
+        "Incomplete DB credentials, missing: DB_USER",
+    )
+
+
+@pytest.mark.usefixtures("incomplete_credentials")
+def test_cli_no_db_ignores_incomplete_credentials(
+    file_store_only: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Incomplete DB credentials do not matter if the database store is disabled."""
+    monkeypatch.setattr(simulation, "simulate_datapackage", fake_simulation(1.0))
+
+    run_cli(monkeypatch, "run", str(file_store_only), "--no-db")
+
+    assert read_flow(settings.RESULTS_DIR) == 1.0
+
+
+@pytest.mark.usefixtures("incomplete_credentials")
+@pytest.mark.parametrize("args", [["run"], ["views"]])
+def test_cli_incomplete_credentials_fail_if_db_is_used(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+    args: list[str],
+) -> None:
+    """Incomplete DB credentials are reported instead of silently falling back to files."""
+    monkeypatch.setattr(simulation, "simulate_datapackage", fail_simulation)
+
+    with pytest.raises(SystemExit):
+        run_cli(monkeypatch, *args)
+
+    assert "missing: DB_USER" in capsys.readouterr().err

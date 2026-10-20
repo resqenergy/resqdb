@@ -22,6 +22,8 @@ def db_connection() -> Iterator[Connection]:
         Connection: Connection with an open transaction.
 
     """
+    if ENGINE is None:
+        pytest.skip("Database not configured.")
     try:
         connection = ENGINE.connect()
     except OperationalError as error:

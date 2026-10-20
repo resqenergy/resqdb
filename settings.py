@@ -58,7 +58,13 @@ def get_database_url(environ: Mapping[str, str]) -> str | None:
     return f"timescaledb://{user}:{password}@{host}:{port}/{name}"
 
 
-DATABASE_URL = get_database_url(os.environ)
+# Incomplete credentials only fail if the database store is used (see main)
+DB_CONFIG_ERROR: str | None = None
+try:
+    DATABASE_URL = get_database_url(os.environ)
+except ValueError as error:
+    DATABASE_URL = None
+    DB_CONFIG_ERROR = str(error)
 
 
 def connect_to_db(url: str) -> Engine:

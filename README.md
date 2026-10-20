@@ -33,7 +33,7 @@ uv sync
 
 The application is configured via environment variables. Create a `.env` file in the root directory with the following variables.
 All `DB_*` credentials are optional: if none are set, the database store is disabled and results are written to the file store only.
-Setting only some of them is an error.
+Setting only some of them is an error, unless the database store is disabled via `run --no-db`.
 
 ```env
 DB_USER=your_db_user

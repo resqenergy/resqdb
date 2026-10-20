@@ -186,6 +186,9 @@ def main() -> None:
 
     args = parser.parse_args()
     if settings.ENGINE is None:
+        uses_db = args.parser in DB_COMMANDS or getattr(args, "use_db", False)
+        if settings.DB_CONFIG_ERROR and uses_db:
+            parser.error(settings.DB_CONFIG_ERROR)
         if args.parser in DB_COMMANDS:
             parser.error("database not configured (set DB_* credentials)")
         if args.parser == "run":
