@@ -6,10 +6,14 @@ import json
 import os
 import pathlib
 import warnings
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 from loguru import logger
 from sqlalchemy import Engine, create_engine
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 warnings.filterwarnings("ignore", category=FutureWarning, module="oemof.solph")
 
@@ -27,28 +31,55 @@ VIEWS_DIR = ROOT_DIR / "views"
 SCENARIOS_DIR = ROOT_DIR / "scenarios"
 
 # --- Database Configuration ---
-DB_USER = os.environ["DB_USER"]
-DB_PASSWORD = os.environ["DB_PASSWORD"]
-DB_HOST = os.environ["DB_HOST"]
-DB_PORT = os.environ["DB_PORT"]
-DB_NAME = os.environ["DB_NAME"]
+DB_CREDENTIALS = ("DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME")
 DB_SCHEMA = os.environ.get("DB_SCHEMA", "public")
 
-DATABASE_URL = f"timescaledb://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
+def get_database_url(environ: Mapping[str, str]) -> str | None:
+    """
+    Build the database URL from DB credentials in the given environment.
+
+    Args:
+        environ (Mapping[str, str]): Environment holding the DB credentials.
+
+    Returns:
+        str | None: Database URL, or None if no credentials are set (database store disabled).
+
+    Raises:
+        ValueError: If only some of the credentials are set.
+
+    """
+    missing = [key for key in DB_CREDENTIALS if not environ.get(key)]
+    if len(missing) == len(DB_CREDENTIALS):
+        return None
+    if missing:
+        raise ValueError(f"Incomplete DB credentials, missing: {', '.join(missing)}")
+    user, password, host, port, name = (environ[key] for key in DB_CREDENTIALS)
+    return f"timescaledb://{user}:{password}@{host}:{port}/{name}"
+
+
+DATABASE_URL = get_database_url(os.environ)
 
 
 def connect_to_db(url: str) -> Engine:
-    """Connect to the PostgreSQL database."""
-    logger.info(f"Connecting to database: {url}")
-    return create_engine(DATABASE_URL)
+    """
+    Connect to the PostgreSQL database.
+
+    Args:
+        url (str): Database URL.
+
+    Returns:
+        Engine: Engine connected to the database.
+
+    """
+    logger.info("Connecting to database.")
+    return create_engine(url)
 
 
-ENGINE = connect_to_db(DATABASE_URL)
+ENGINE = connect_to_db(DATABASE_URL) if DATABASE_URL else None
 
 # --- OEMOF Settings ---
-OEMOF_WRITE_RESULTS = os.getenv("OEMOF_WRITE_RESULTS", "False") == "True"
 OEMOF_SCENARIO = os.getenv("OEMOF_SCENARIO", "dispatch")
-OEMOF_OVERWRITE_RESULTS = os.getenv("OEMOF_OVERWRITE_RESULTS", "False") == "True"
 
 # --- Cluster Mapping ---
 CLUSTER_COMPONENT_FILE = CONFIG_DIR / "clusters.json"

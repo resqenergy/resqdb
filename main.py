@@ -6,6 +6,8 @@ import argparse
 import contextlib
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 from scenarios import ScenarioError
 
 if TYPE_CHECKING:
@@ -14,38 +16,92 @@ if TYPE_CHECKING:
 import export
 import models
 import scenarios
+import settings
 import simulation
 import views
 
 NO_ARGS_FCT = ("setup", "nuke")
+DB_COMMANDS = ("setup", "nuke", "delete", "views")
 
 
-def run_all(*, force_creation: bool = False) -> None:
-    """Run all scenarios store results in the database."""
+def run_all(
+    *,
+    force_creation: bool = False,
+    use_db: bool = True,
+    use_files: bool = True,
+) -> None:
+    """
+    Run all scenarios from scenario folder and store results in enabled result stores.
+
+    Args:
+        force_creation (bool): Replace existing results in enabled result stores.
+        use_db (bool): Store results in database store.
+        use_files (bool): Store results in file store.
+
+    """
     for file in scenarios.get_scenarios_in_folder():
-        run_scenario(file, force_creation=force_creation)
-    views.create_all_views(recreate=True)
-
-
-def run_scenario(file: str | Path, *, force_creation: bool = False) -> None:
-    """Run scenario from scenario folder."""
-    scenario_config = scenarios.load_scenario_settings_from_file(file)
-    if force_creation:
-        with contextlib.suppress(ScenarioError):
-            scenarios.delete_scenario(scenario_config.name)
-    try:
-        scenario_id = scenarios.create_scenario(
-            scenario_config.name,
-            **scenario_config.scenario,
+        run_scenario(
+            file,
+            force_creation=force_creation,
+            use_db=use_db,
+            use_files=use_files,
         )
-    except ScenarioError:
+    if use_db:
+        views.create_all_views(recreate=True)
+
+
+def run_scenario(
+    file: str | Path,
+    *,
+    force_creation: bool = False,
+    use_db: bool = True,
+    use_files: bool = True,
+) -> None:
+    """
+    Run scenario from scenario folder and store results in enabled result stores.
+
+    Scenarios with existing results are skipped without simulating, unless forced.
+
+    Args:
+        file (str | Path): Scenario name or path to scenario file.
+        force_creation (bool): Replace existing results in enabled result stores.
+        use_db (bool): Store results in database store.
+        use_files (bool): Store results in file store.
+
+    """
+    scenario_config = scenarios.load_scenario_settings_from_file(file)
+    if (
+        not use_db
+        and not force_creation
+        and export.has_results_in_folder(scenario_config.name)
+    ):
+        logger.warning(
+            f"Results for scenario '{scenario_config.name}' already exist. Skipping.",
+        )
         return
+    if use_db:
+        if force_creation:
+            with contextlib.suppress(ScenarioError):
+                scenarios.delete_scenario(scenario_config.name)
+        try:
+            scenario_id = scenarios.create_scenario(
+                scenario_config.name,
+                **scenario_config.scenario,
+            )
+        except ScenarioError:
+            return
     input_data, output_data = simulation.simulate_datapackage(
         scenario_config.datapackage,
         scenario_config.capacities,
     )
-    export.store_results_in_folder(str(file), output_data)
-    export.store_scenario_results(scenario_id, input_data, output_data)
+    if use_files:
+        export.store_results_in_folder(
+            scenario_config.name,
+            output_data,
+            overwrite=force_creation,
+        )
+    if use_db:
+        export.store_scenario_results(scenario_id, input_data, output_data)
 
 
 def handle_delete(args: argparse.Namespace) -> None:
@@ -59,9 +115,14 @@ def handle_delete(args: argparse.Namespace) -> None:
 def handle_run(args: argparse.Namespace) -> None:
     """Handle scenario runs."""
     if args.scenario == "all":
-        run_all(force_creation=args.force)
+        run_all(force_creation=args.force, use_db=args.use_db, use_files=args.use_files)
     else:
-        run_scenario(args.scenario, force_creation=args.force)
+        run_scenario(
+            args.scenario,
+            force_creation=args.force,
+            use_db=args.use_db,
+            use_files=args.use_files,
+        )
 
 
 def handle_views(args: argparse.Namespace) -> None:
@@ -101,6 +162,8 @@ def main() -> None:
     run_parser = subparsers.add_parser("run")
     run_parser.add_argument("scenario", nargs="?", default="all")
     run_parser.add_argument("-f", "--force", action="store_true")
+    run_parser.add_argument("--no-db", dest="use_db", action="store_false")
+    run_parser.add_argument("--no-files", dest="use_files", action="store_false")
     run_parser.set_defaults(func=handle_run)
 
     # DB setup command
@@ -122,6 +185,15 @@ def main() -> None:
     view_parser.set_defaults(func=handle_views)
 
     args = parser.parse_args()
+    if settings.ENGINE is None:
+        if args.parser in DB_COMMANDS:
+            parser.error("database not configured (set DB_* credentials)")
+        if args.parser == "run":
+            args.use_db = False
+    if args.parser == "run" and not (args.use_db or args.use_files):
+        parser.error(
+            "no result store enabled: --no-files given, but database store is off",
+        )
     if args.parser in NO_ARGS_FCT:
         args.func()
     else:

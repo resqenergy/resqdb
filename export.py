@@ -14,25 +14,46 @@ import models
 import settings
 
 
-def store_results_in_folder(datapackage_name: str, results: dict) -> None:
+def has_results_in_folder(scenario_name: str) -> bool:
+    """
+    Check whether results for the given scenario exist in the results folder.
+
+    Args:
+        scenario_name (str): Name of the scenario folder.
+
+    Returns:
+        bool: True if the scenario folder exists and is not empty.
+
+    """
+    results_path = settings.RESULTS_DIR / scenario_name
+    return results_path.exists() and any(results_path.iterdir())
+
+
+def store_results_in_folder(
+    scenario_name: str,
+    results: dict,
+    *,
+    overwrite: bool = False,
+) -> None:
     """
     Store the results of an oemof simulation as CSV files in the results folder.
 
     Results are categorized into scalars and sequences. If a folder with the specified
-    datapackage name already exists and is not empty, the method skips saving the
+    scenario name already exists and is not empty, the method skips saving the
     results unless overwriting of results is explicitly enabled.
 
     Args:
-        datapackage_name (str): Name of the folder where results will be stored.
+        scenario_name (str): Name of the folder where results will be stored.
         results (dict): A dictionary with keys as tuples (node1, node2) and values
             as dictionaries containing 'scalars' and 'sequences' DataFrames.
+        overwrite (bool): Replace existing results in folder.
 
     """
-    results_path = settings.RESULTS_DIR / datapackage_name
+    results_path = settings.RESULTS_DIR / scenario_name
 
     # Check if folder already exists
-    if results_path.exists() and any(results_path.iterdir()):
-        if settings.OEMOF_OVERWRITE_RESULTS:
+    if has_results_in_folder(scenario_name):
+        if overwrite:
             shutil.rmtree(results_path)
         else:
             msg = (

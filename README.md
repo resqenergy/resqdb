@@ -31,7 +31,9 @@ uv sync
 
 ### Configuration
 
-The application is configured via environment variables. Create a `.env` file in the root directory with the following variables:
+The application is configured via environment variables. Create a `.env` file in the root directory with the following variables.
+All `DB_*` credentials are optional: if none are set, the database store is disabled and results are written to the file store only.
+Setting only some of them is an error.
 
 ```env
 DB_USER=your_db_user
@@ -49,8 +51,11 @@ The application provides a command-line interface `resq` to manage the simulatio
 
 ### Available Commands
 
-- **`run [scenario]`**: Run energy system simulations.
+- **`run [scenario]`**: Run energy system simulations and store results in the enabled result stores.
     - `scenario`: Name of the scenario to run or `all` (default) to run all scenarios found in the scenarios folder.
+    - `-f`, `--force`: Re-run existing scenarios, replacing their results in all enabled result stores.
+    - `--no-db`: Do not store results in the database.
+    - `--no-files`: Do not store results as files. Requires a configured database.
 - **`setup`**: Initialize the database schema and tables.
 - **`nuke`**: Drop the database schema and all its contents (use with caution).
 - **`delete [id]`**: Delete scenario results from the database.
@@ -58,11 +63,23 @@ The application provides a command-line interface `resq` to manage the simulatio
 - **`views [command]`**: Manage database materialized views for visualization.
     - `command`: `recreate` (default) to update metadata and refresh views, or `drop` to remove all views.
 
+### Result stores
+
+- **Database store**: inputs and outputs of each scenario, used by the materialized views. Enabled if DB credentials are set.
+- **File store**: outputs of each scenario as CSV files in `results/<scenario name>/`. Mandatory without a database.
+
+`OEMOF_OVERWRITE_RESULTS` and `OEMOF_WRITE_RESULTS` were removed; use `run --force` to overwrite existing results.
+
 ### Examples
 
 Run all scenarios:
 ```bash
 python main.py run all
+```
+
+Run a single scenario without database:
+```bash
+python main.py run my_scenario --no-db
 ```
 
 Initialize the database:
