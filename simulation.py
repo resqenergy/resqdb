@@ -10,12 +10,14 @@ from oemof.tabular.facades import TYPEMAP
 
 import hooks
 import settings
+from facades.conversion import ConversionMax
 from facades.heatpump import AquiferHeatpump, FLHHeatpump, Heatpump
 
 RESQ_TYPEMAP = TYPEMAP.copy()
 RESQ_TYPEMAP["heatpump"] = Heatpump
 RESQ_TYPEMAP["flh_heatpump"] = FLHHeatpump
 RESQ_TYPEMAP["aquifer_heatpump"] = AquiferHeatpump
+RESQ_TYPEMAP["conversion_max"] = ConversionMax
 
 
 def simulate_datapackage(
